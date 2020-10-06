@@ -42,7 +42,11 @@ strcmp:
 #if SZREG == 4
   li a5, 0x7f7f7f7f
 #else
-  ld a5, mask
+  # I assume crt0.s already init the gp.
+  # ld a5, mask
+  lui	a5, %gprel_hi(mask)
+  add	a5, a5, gp, %gprel (mask)
+  ld	a5, %gprel_lo(mask)(a5)
 #endif
 
   .macro check_one_word i n

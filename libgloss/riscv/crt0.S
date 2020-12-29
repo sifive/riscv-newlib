@@ -22,13 +22,25 @@ _start:
   # Initialize global pointer
 .option push
 .option norelax
+#ifdef __riscv_cmodel_compact
+1:auipc        a0, %pcrel_hi(__global_pointer__)
+  addi a0, a0, %pcrel_lo(1b)
+  ld   gp, 0(a0)
+  add  gp, gp, a0
+#else
 1:auipc gp, %pcrel_hi(__global_pointer$)
   addi  gp, gp, %pcrel_lo(1b)
+#endif
 .option pop
 
   # Clear the bss segment
+#ifdef __riscv_cmodel_compact
+  lla.gprel    a0, _edata
+  lla.gprel    a2, _end
+#else
   la      a0, _edata
   la      a2, _end
+#endif
   sub     a2, a2, a0
   li      a1, 0
   call    memset
@@ -36,12 +48,20 @@ _start:
   # Make reference to atexit weak to avoid unconditionally pulling in
   # support code.  Refer to comments in __atexit.c for more details.
   .weak   atexit
+#ifdef __riscv_cmodel_compact
+  la.got.gprel a0, atexit
+#else
   la      a0, atexit
+#endif
   beqz    a0, .Lweak_atexit
   .weak   __libc_fini_array
 #endif
 
+#ifdef __riscv_cmodel_compact
+  la.got.gprel a0, __libc_fini_array
+#else
   la      a0, __libc_fini_array   # Register global termination functions
+#endif
   call    atexit                  #  to be called upon exit
 #ifdef _LITE_EXIT
 .Lweak_atexit:
@@ -54,3 +74,12 @@ _start:
   call    main
   tail    exit
   .size  _start, .-_start
+
+#ifdef __riscv_cmodel_compact
+  .section .text.__global_pointer__, "aMG",@progbits, 8, __global_pointer__, comdat
+  .align 3
+  .global __global_pointer__
+  .type   __global_pointer__, object
+__global_pointer__:
+  .quad   __global_pointer$ -.
+#endif

@@ -42,7 +42,13 @@ strcmp:
 #if SZREG == 4
   li a5, 0x7f7f7f7f
 #else
+#ifdef __riscv_cmodel_compact
+  lui  a5, %gprel_hi(mask)
+  add  a5, a5, gp, %gprel (mask)
+  ld   a5, %gprel_lo(mask)(a5)
+#else
   ld a5, mask
+#endif
 #endif
 
   .macro check_one_word i n

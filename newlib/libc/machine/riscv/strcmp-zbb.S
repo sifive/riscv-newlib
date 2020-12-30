@@ -1,4 +1,4 @@
-/* Copyright (c) 2017  SiFive Inc. All rights reserved.
+/* Copyright (c) 2020  SiFive Inc. All rights reserved.
 
    This copyrighted material is made available to anyone wishing to use,
    modify, copy, or redistribute it subject to the terms and conditions
@@ -15,60 +15,37 @@
 # error
 #endif
 
-#if defined(__riscv_zbb) && !(defined(PREFER_SIZE_OVER_SPEED) && defined(__OPTIMIZE_SIZE__))
-#include "strcmp-zbb.S"
+#ifndef __riscv_zbb
+#error "Must compile with zbb"
+#endif
+
+#if __riscv_xlen == 64
+  #define N 3
 #else
+  #define N 5
+#endif
+
 .text
 .globl strcmp
 .type  strcmp, @function
+.align 2
 strcmp:
-#if defined(PREFER_SIZE_OVER_SPEED) && defined(__OPTIMIZE_SIZE__)
-1:
-  lbu   a2, 0(a0)
-  lbu   a3, 0(a1)
-  add   a0, a0, 1
-  add   a1, a1, 1
-  bne   a2, a3, 2f
-  bnez  a2, 1b
-
-2:
-  sub   a0, a2, a3
-  ret
-
-.size	strcmp, .-strcmp
-#else
   or    a4, a0, a1
   li    t2, -1
   and   a4, a4, SZREG-1
-  bnez  a4, .Lmisaligned
-
-#if SZREG == 4
-  li a5, 0x7f7f7f7f
-#else
-#ifdef __riscv_cmodel_compact
-  lui  a5, %gprel_hi(mask)
-  add  a5, a5, gp, %gprel (mask)
-  ld   a5, %gprel_lo(mask)(a5)
-#else
-  ld a5, mask
-#endif
-#endif
+  beqz  a4, .Lenter
+  j .Lmisaligned
 
   .macro check_one_word i n
     REG_L a2, \i*SZREG(a0)
     REG_L a3, \i*SZREG(a1)
 
-    and   t0, a2, a5
-    or    t1, a2, a5
-    add   t0, t0, a5
-    or    t0, t0, t1
+    orc.b t0, a2
 
     bne   t0, t2, .Lnull\i
     .if \i+1-\n
       bne   a2, a3, .Lmismatch
     .else
-      add   a0, a0, \n*SZREG
-      add   a1, a1, \n*SZREG
       beq   a2, a3, .Lloop
       # fall through to .Lmismatch
     .endif
@@ -89,52 +66,32 @@ strcmp:
   .endm
 
 .Lloop:
+  add   a0, a0, N*SZREG
+  add   a1, a1, N*SZREG
+
+.Lenter:
   # examine full words at a time, favoring strings of a couple dozen chars
 #if __riscv_xlen == 32
-  check_one_word 0 5
-  check_one_word 1 5
-  check_one_word 2 5
-  check_one_word 3 5
-  check_one_word 4 5
+  check_one_word 0 N
+  check_one_word 1 N
+  check_one_word 2 N
+  check_one_word 3 N
+  check_one_word 4 N
 #else
-  check_one_word 0 3
-  check_one_word 1 3
-  check_one_word 2 3
+  check_one_word 0 N
+  check_one_word 1 N
+  check_one_word 2 N
 #endif
   # backwards branch to .Lloop contained above
 
 .Lmismatch:
-  # words don't match, but a2 has no null byte.
-#if __riscv_xlen == 64
-  sll   a4, a2, 48
-  sll   a5, a3, 48
-  bne   a4, a5, .Lmismatch_upper
-  sll   a4, a2, 32
-  sll   a5, a3, 32
-  bne   a4, a5, .Lmismatch_upper
-#endif
-  sll   a4, a2, 16
-  sll   a5, a3, 16
-  bne   a4, a5, .Lmismatch_upper
-
-  srl   a4, a2, 8*SZREG-16
-  srl   a5, a3, 8*SZREG-16
-  sub   a0, a4, a5
-  and   a1, a0, 0xff
-  bnez  a1, 1f
+  rev8 a4, a2
+  rev8 a5, a3
+  bgeu a4, a5, 1f
+  li a0, -1
   ret
-
-.Lmismatch_upper:
-  srl   a4, a4, 8*SZREG-16
-  srl   a5, a5, 8*SZREG-16
-  sub   a0, a4, a5
-  and   a1, a0, 0xff
-  bnez  a1, 1f
-  ret
-
-1:and   a4, a4, 0xff
-  and   a5, a5, 0xff
-  sub   a0, a4, a5
+1:
+  li a0, 1
   ret
 
 .Lmisaligned:
@@ -163,12 +120,3 @@ strcmp:
   foundnull 2 3
 #endif
 .size	strcmp, .-strcmp
-
-#if SZREG == 8
-.section .srodata.cst8,"aM",@progbits,8
-.align 3
-mask:
-.dword 0x7f7f7f7f7f7f7f7f
-#endif
-#endif
-#endif

@@ -15,3 +15,7 @@ lib_a_CFLAGS=$(AM_CFLAGS)
 
 ACLOCAL_AMFLAGS = -I ../../.. -I ../../../..
 CONFIG_STATUS_DEPENDENCIES = $(newlib_basedir)/configure.host
+
+STRCMP_DEP=strcmp-zbb.S
+
+$(lpfx)strcmp.o: $(STRCMP_DEP)

@@ -148,7 +148,7 @@ gloss_c_objs = $(patsubst %.c, %.o, $(notdir $(gloss_c_srcs)))
 gloss_c_deps = $(patsubst %.c, %.d, $(notdir $(gloss_c_srcs)))
 
 $(gloss_c_objs) : %.o : %.c
-	$(COMPILE) -c $<
+	$(COMPILE) -c -DUSING_QEMU $<
 
 gloss_objs += $(gloss_c_objs)
 deps += $(gloss_c_deps)

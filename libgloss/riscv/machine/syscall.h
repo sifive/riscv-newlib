@@ -20,7 +20,11 @@
 #define SYS_openat 56
 #define SYS_close 57
 #define SYS_getdents 61
+#if __riscv_xlen == 32
+#define SYS_llseek 62
+#else
 #define SYS_lseek 62
+#endif
 #define SYS_read 63
 #define SYS_write 64
 #define SYS_writev 66

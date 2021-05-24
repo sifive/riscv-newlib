@@ -15,6 +15,7 @@
 #define SYS_getcwd 17
 #define SYS_dup 23
 #define SYS_fcntl 25
+#define SYS_unlinkat 35
 #define SYS_faccessat 48
 #define SYS_chdir 49
 #define SYS_openat 56
@@ -84,4 +85,11 @@
 #define SEMIHOST_write 0x05
 #define SEMIHOST_writec 0x03
 #define SEMIHOST_write0 0x04
+
+
+#ifdef USING_QEMU
+/* Newlib and linux using differnt value for AT_FDCWD.  */
+#define LINUX_AT_FDCWD           -100
+#endif
+
 #endif

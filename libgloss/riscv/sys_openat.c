@@ -4,9 +4,6 @@
 #ifdef USING_QEMU
 #include <fcntl.h>
 
-/* Newlib and linux using differnt value for AT_FDCWD.  */
-#define LINUX_AT_FDCWD           -100
-
 /* And also using differnt value for open's flags.  */
 #define LINUX_O_CREAT 0100
 #define LINUX_O_TRUNC 01000

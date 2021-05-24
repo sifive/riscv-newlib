@@ -4,9 +4,6 @@
 
 /* Status of a file (by name).  */
 
-/* Newlib and linux using differnt value for AT_FDCWD.  */
-#define LINUX_AT_FDCWD           -100
-
 int
 _stat(const char *file, struct stat *st)
 {
